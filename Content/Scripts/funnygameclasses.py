@@ -5,7 +5,7 @@ from unreal_engine.classes import WheeledVehicleMovementComponent
 print('Hello i am a Python module')
 
 class Hero:
-
+    
     # this is called on game start
     def begin_play(self):
         ue.log('Begin Play on Hero class')

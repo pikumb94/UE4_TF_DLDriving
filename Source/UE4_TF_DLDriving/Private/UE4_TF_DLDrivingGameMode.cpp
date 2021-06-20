@@ -3,9 +3,10 @@
 #include "UE4_TF_DLDrivingGameMode.h"
 #include "UE4_TF_DLDrivingPawn.h"
 #include "UE4_TF_DLDrivingHud.h"
+#include "NN_ControlledPawn.h"
 
 AUE4_TF_DLDrivingGameMode::AUE4_TF_DLDrivingGameMode()
 {
-	DefaultPawnClass = AUE4_TF_DLDrivingPawn::StaticClass();
+	//DefaultPawnClass = ANN_ControlledPawn::StaticClass();
 	HUDClass = AUE4_TF_DLDrivingHud::StaticClass();
 }
