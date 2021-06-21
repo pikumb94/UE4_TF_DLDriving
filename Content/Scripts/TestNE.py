@@ -2,6 +2,8 @@ import unreal_engine as ue
 import tensorflow as tf
 from tensorflow.python.keras import backend as ks	#to ensure things work well with multi-threading
 import numpy as np   	#for reshaping input
+import json
+from json import JSONEncoder
 from unreal_engine.classes import WheeledVehicleMovementComponent
 #from unreal_engine.classes import NN_ControlledPawn
 from unreal_engine import FVector, FRotator, FTransform, FHitResult
@@ -44,9 +46,10 @@ class TestNE:
         ue.log_warning('SPAWNING')
         new_actor = self.uobject.actor_spawn(ue.find_class('NN_ControlledPawn'), self.uobject.get_actor_location(),FRotator(0, 0, 0))
         component = new_actor.GetComponentByClass(PythonComponent)
-        print(tf.strings)
-        #stringa = RecFlatten(model.get_weights())
-        #component.CallPythonComponentMethod("LoadModel", tf.strings.dtypes.as_string(model.get_weights()))
+        
+        #print(model.get_weights())
+        encodedNumpyData = json.dumps(model.get_weights(), cls=NumpyArrayEncoder)  # use dump() to write array into file
+        component.CallPythonComponentMethod("LoadModel", encodedNumpyData)
         #print(component.functions())
 
 
@@ -57,6 +60,11 @@ class TestNE:
 
 
 
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return JSONEncoder.default(self, obj)
 
 def RecFlatten(Weights):
   v=np.array([])
