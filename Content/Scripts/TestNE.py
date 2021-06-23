@@ -10,12 +10,13 @@ from unreal_engine import FVector, FRotator, FTransform, FHitResult
 from unreal_engine.classes import ActorComponent, PythonComponent
 from collections.abc import Iterable
 
+ks.clear_session()
 print('TestNE')
 NN_topology = [tf.keras.layers.Dense(3, activation=tf.nn.tanh),
 tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(2, activation=tf.nn.tanh)]
-ks.clear_session()
+
 model = tf.keras.models.Sequential(NN_topology)
 x = tf.constant([[1.0,-1.0,1.0]])
 y = model(x)

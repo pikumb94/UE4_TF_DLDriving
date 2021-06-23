@@ -10,12 +10,11 @@ from collections.abc import Iterable   # import directly from collections for Py
 from unreal_engine.classes import WheeledVehicleMovementComponent
 
 print('NNDriveCar')
-
 NN_topology = [tf.keras.layers.Dense(3, activation=tf.nn.tanh),
 tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(2, activation=tf.nn.tanh)]
-sess = ks.get_session()
+#sess = ks.get_session()
 
 class NNDriveCar:
 
@@ -31,17 +30,24 @@ class NNDriveCar:
     def begin_play(self):
         #sess = tf.Session()
         self.pawn = self.uobject.get_owner()
+        #print(self.uobject.functions())
+        #print(self.uobject.properties())
+        self.uobject.SetComponentTickInterval(0.150)
         #print(self.pawn.properties())
         #print(self.pawn.functions())
         
     # this is called at every 'tick'    
     def tick(self, delta_time):
-        print(delta_time)
+        #print(delta_time)
         if(self.bModelLoaded):
-            
-            y = self.model(tf.constant([[1.0,-1.0,1.0]]))#velocity, front and side
-            y=sess.run(y)
-            self.pawn.ActuateActions(1,1)
+            x=tf.compat.v1.placeholder(tf.float32, shape=(1, 3))
+            #y = self.model()#velocity, front and side
+            y=self.model(x)
+            with ks.get_session() as session:
+                result = session.run(y, feed_dict={x: [[1.0,-1.0,1.0]]})
+                print(result)
+                self.pawn.ActuateActions(1.0,1.0)
+
     
     def LoadModel(self, NewModel):
         decodedWeights = json.loads(NewModel)
