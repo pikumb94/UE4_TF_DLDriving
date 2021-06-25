@@ -8,6 +8,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "UObject/ConstructorHelpers.h"
 #include "PythonComponent.h"
+#include "AIController.h"
 
 ANN_ControlledPawn::ANN_ControlledPawn()
 {
@@ -19,12 +20,12 @@ ANN_ControlledPawn::ANN_ControlledPawn()
 	PythonComp->PythonModule = PythonComp->PythonClass = "NNDriveCar";
 }
 
-void ANN_ControlledPawn::SetupPlayerInputComponent(UInputComponent* InputComponent)
+void ANN_ControlledPawn::SetupPlayerInputComponent(UInputComponent* InpCmp)
 {
 	if(bEnablePlayerInput)
-		Super::SetupPlayerInputComponent(InputComponent);
+		Super::SetupPlayerInputComponent(InpCmp);
 	else
-		AWheeledVehicle::SetupPlayerInputComponent(InputComponent);
+		AWheeledVehicle::SetupPlayerInputComponent(InpCmp);
 }
 
 void ANN_ControlledPawn::BeginPlay()
@@ -32,6 +33,11 @@ void ANN_ControlledPawn::BeginPlay()
 	Super::BeginPlay();
 
 	MainBBox = GetMesh()->Bounds.GetBox();
+
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+	FActorSpawnParameters SpawnInfo;
+	AAIController* AIController = GetWorld()->SpawnActor<AAIController>(FVector::ZeroVector, FRotator::ZeroRotator,SpawnInfo);
+	AIController->Possess(this);
 }
 
 void ANN_ControlledPawn::Tick(float Delta)
@@ -111,3 +117,5 @@ void ANN_ControlledPawn::ActuateActions(float forward, float right)
 	MoveForward(forward);
 	MoveRight(right);
 }
+
+FString A

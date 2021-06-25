@@ -12,6 +12,7 @@ from collections.abc import Iterable
 
 ks.clear_session()
 print('TestNE')
+print(tf.version.VERSION)
 NN_topology = [tf.keras.layers.Dense(3, activation=tf.nn.tanh),
 tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(4, activation=tf.nn.tanh),

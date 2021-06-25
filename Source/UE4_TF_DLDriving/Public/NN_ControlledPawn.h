@@ -44,6 +44,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void ActuateActions(float forward, float right);
+
+	UFUNCTION(BlueprintCallable)
+	FString GetInputsString();
 protected:
 	virtual void BeginPlay() override;
 
