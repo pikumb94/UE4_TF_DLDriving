@@ -46,8 +46,10 @@ public:
 	void ActuateActions(float forward, float right);
 
 	UFUNCTION(BlueprintCallable)
-	FString GetInputsString();
+	FString GetInputsAsString();
 protected:
 	virtual void BeginPlay() override;
-
+private:
+	float GetFrontDstPerc();
+	float GetSideTrackPerc();
 };

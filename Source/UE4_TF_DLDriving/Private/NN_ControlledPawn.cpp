@@ -40,38 +40,28 @@ void ANN_ControlledPawn::BeginPlay()
 	AIController->Possess(this);
 }
 
-void ANN_ControlledPawn::Tick(float Delta)
+float ANN_ControlledPawn::GetFrontDstPerc()
 {
-	Super::Tick(Delta);
-
-	/*SENSORS-RAYCASTS*/
 	FHitResult OutHit;
-
 	FBox BBox = MainBBox;
+	FCollisionQueryParams CollisionParams;
+	CollisionParams.bTraceComplex = true;
+	CollisionParams.AddIgnoredComponent(GetMesh());
 
 	FVector ForwardVector = GetActorForwardVector();
 	FVector Start = ((ForwardVector * BBox.GetExtent().X) + GetActorLocation());
 	FVector End = ((ForwardVector * MaxRaycastLengthFront) + Start);
-	//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Start is at: %s"), *Start.ToString())); //Little noise on Z: is a problem??
 
-	FCollisionQueryParams CollisionParams;
-	CollisionParams.bTraceComplex = true;
-	CollisionParams.AddIgnoredComponent(GetMesh());
-	// or you could use either of the below to ignore the root cube
-	// CollisionParams.AddIgnoredComponent_LikelyDuplicatedRoot(Cube);
-	// CollisionParams.AddIgnoredActor(this);
+	float percDst = 0.0;
+
 
 	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, -1, 0, 5);
-
-	//if (ActorLineTraceSingle(OutHit, Start, End, ECC_WorldStatic, CollisionParams))
-	//	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("The Component Being Hit is: %s"), *OutHit.GetComponent()->GetName()));
-
-
 	if (GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECC_Visibility, CollisionParams))
 	{
 		if (OutHit.bBlockingHit && OutHit.GetActor())
 		{
-			float percDst = OutHit.Distance / MaxRaycastLengthFront;
+			percDst = OutHit.Distance / MaxRaycastLengthFront;
+
 			if (GEngine) {
 
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("You are hitting: %s"), *OutHit.GetActor()->GetName()));
@@ -81,6 +71,17 @@ void ANN_ControlledPawn::Tick(float Delta)
 			}
 		}
 	}
+	return percDst;
+}
+
+float ANN_ControlledPawn::GetSideTrackPerc()
+{
+	FHitResult OutHit;
+	FBox BBox = MainBBox;
+	FCollisionQueryParams CollisionParams;
+	CollisionParams.bTraceComplex = true;
+	CollisionParams.AddIgnoredComponent(GetMesh());
+
 	FHitResult OutHitRight;
 	FHitResult OutHitLeft;
 	FVector RightVector = GetActorRightVector();
@@ -90,6 +91,9 @@ void ANN_ControlledPawn::Tick(float Delta)
 	FVector StartLeft = (-(RightVector * BBox.GetExtent().Y) + GetActorLocation());
 	FVector EndLeft = (-(RightVector * MaxRaycastLengthSide) + StartLeft);
 
+
+	float percDst = 0.0;
+
 	DrawDebugLine(GetWorld(), StartRight, EndRight, FColor::Yellow, false, -1, 0, 5);
 	DrawDebugLine(GetWorld(), StartLeft, EndLeft, FColor::Green, false, -1, 0, 5);
 
@@ -97,7 +101,7 @@ void ANN_ControlledPawn::Tick(float Delta)
 	{
 		if (OutHitRight.bBlockingHit && OutHitRight.GetActor() && OutHitLeft.bBlockingHit && OutHitLeft.GetActor())
 		{
-			float percDst = -1 + (OutHitLeft.Distance / ((OutHitLeft.Distance + OutHitRight.Distance) / 2));
+			percDst = -1 + (OutHitLeft.Distance / ((OutHitLeft.Distance + OutHitRight.Distance) / 2));
 
 			if (GEngine) {
 
@@ -106,6 +110,16 @@ void ANN_ControlledPawn::Tick(float Delta)
 			}
 		}
 	}
+
+	return percDst;
+}
+
+void ANN_ControlledPawn::Tick(float Delta)
+{
+	Super::Tick(Delta);
+
+	/*SENSORS-RAYCASTS*/
+
 
 	/*@TODO: SEND INPUT TO PYTHON NN*/
 }
@@ -118,4 +132,9 @@ void ANN_ControlledPawn::ActuateActions(float forward, float right)
 	MoveRight(right);
 }
 
-FString A
+
+FString ANN_ControlledPawn::GetInputsAsString()
+{
+	float KPH = GetVehicleMovement()->GetForwardSpeed() * 0.036f;
+	return FString(FString::SanitizeFloat(KPH)+" "+ FString::SanitizeFloat(GetFrontDstPerc())+" "+ FString::SanitizeFloat(GetSideTrackPerc()));
+}

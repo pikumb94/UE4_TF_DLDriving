@@ -18,7 +18,6 @@ tf.keras.layers.Dense(2, activation=tf.nn.tanh)]
 
 class NNDriveCar:
 
-
     def __init__(self):
     #model and topology is set statically to avoid to pass the topology for every NNCar spawned
         self.model = tf.keras.models.Sequential(NN_topology)
@@ -30,7 +29,7 @@ class NNDriveCar:
     def begin_play(self):
         self.pawn = self.uobject.get_owner()
         self.component = self.uobject.get_component_by_type(WheeledVehicleMovementComponent)
-        print(self.component.functions())
+        print(self.pawn.functions())
         #print(self.uobject.properties())
         self.uobject.SetComponentTickInterval(0.200)
         #print(self.pawn.properties())
@@ -38,11 +37,18 @@ class NNDriveCar:
         
     # this is called at every 'tick'    
     def tick(self, delta_time):
-        print(delta_time)
+        SplitStr = self.pawn.GetInputsAsString().split()
+        
         if(self.bModelLoaded):
-            x = tf.constant([[1.0,-1.0,1.0]])
+            SplitStr = np.array(SplitStr)
+            SplitStr = SplitStr.astype(np.float32)
+            x = tf.constant([SplitStr])
             y = self.model(x)
-            print(y)
+            print('x:%s y:%s'%(type(x[0][0].numpy()),type(y[0][0].numpy())))
+            #print('x:',x[0][0],x[0][1],x[0][2])
+            #print('y:',y[0][0],y[0][1])
+            #print('x:%s'%(x.numpy()))
+            #print('y:%s'%(y.numpy()))
             self.pawn.ActuateActions(y[0][0],y[0][1])
     
     def LoadModel(self, NewModel):
