@@ -9,15 +9,22 @@
 #include "UObject/ConstructorHelpers.h"
 #include "PythonComponent.h"
 #include "AIController.h"
+#include "Components/PrimitiveComponent.h"
+#include "Engine/EngineTypes.h"
 
 ANN_ControlledPawn::ANN_ControlledPawn()
 {
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> NNMaterial(TEXT("/Game/VehicleAdv/Materials/MaterialInstances/Template_BaseOrange.Template_BaseOrange"));
 	GetMesh()->SetMaterial(0, NNMaterial.Object);
-	MaxRaycastLengthFront = MaxRaycastLengthSide = 500.f;
+	MaxRaycastLengthFront = MaxRaycastLengthSide = 1000.f;
 
 	PythonComp = CreateDefaultSubobject<UPythonComponent>(TEXT("PyComponent"));
 	PythonComp->PythonModule = PythonComp->PythonClass = "NNDriveCar";
+
+	GetMesh()->OnComponentHit.AddDynamic(this, &ANN_ControlledPawn::OnHit);
+	//TArray<FName> Names;
+	//GetMesh()->GetBoneNames(Names);
+	ShortestLapTime = 6.f;
 }
 
 void ANN_ControlledPawn::SetupPlayerInputComponent(UInputComponent* InpCmp)
@@ -31,6 +38,8 @@ void ANN_ControlledPawn::SetupPlayerInputComponent(UInputComponent* InpCmp)
 void ANN_ControlledPawn::BeginPlay()
 {
 	Super::BeginPlay();
+
+	GetMesh()->SetBodyNotifyRigidBodyCollision(true, FName("Vehicle"));
 
 	MainBBox = GetMesh()->Bounds.GetBox();
 
@@ -49,7 +58,10 @@ float ANN_ControlledPawn::GetFrontDstPerc()
 	CollisionParams.AddIgnoredComponent(GetMesh());
 
 	FVector ForwardVector = GetActorForwardVector();
-	FVector Start = ((ForwardVector * BBox.GetExtent().X) + GetActorLocation());
+	ForwardVector.Z = 0.0f;
+	ForwardVector.Normalize();
+	FVector Location = GetActorLocation()+ InternalCameraOrigin.Z* FVector(0,0,1);
+	FVector Start = ((ForwardVector * (BBox.GetExtent().X+2.5f)) + Location);
 	FVector End = ((ForwardVector * MaxRaycastLengthFront) + Start);
 
 	float percDst = 0.0;
@@ -60,18 +72,29 @@ float ANN_ControlledPawn::GetFrontDstPerc()
 	{
 		if (OutHit.bBlockingHit && OutHit.GetActor())
 		{
-			percDst = OutHit.Distance / MaxRaycastLengthFront;
-
+			percDst = OutHit.Distance / FVector::Distance(Start,End);
+			/*
 			if (GEngine) {
 
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("You are hitting: %s"), *OutHit.GetActor()->GetName()));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Impact Point: %s"), *FString::SanitizeFloat(OutHit.Distance)));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Front Perc: %s"), *FString::SanitizeFloat(percDst)));
-
-			}
+				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Comp: %s"), *(End-Start).ToString()));
+			}*/
 		}
 	}
 	return percDst;
+}
+
+void ANN_ControlledPawn::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (GEngine) {
+
+		//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Comp: %s %s %s"), *Hit.BoneName.ToString(), *Hit.MyBoneName.ToString(), *HitComponent->GetName()));
+
+	}
+	//NOTIFY PYTHON OF YOUR SCORE
+	FitnessFunction(GetGameTimeSinceCreation());
 }
 
 float ANN_ControlledPawn::GetSideTrackPerc()
@@ -85,10 +108,13 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 	FHitResult OutHitRight;
 	FHitResult OutHitLeft;
 	FVector RightVector = GetActorRightVector();
-	FVector StartRight = ((RightVector * BBox.GetExtent().Y) + GetActorLocation());
+	RightVector.Z = 0.0f;
+	RightVector.Normalize();
+	FVector Location = GetActorLocation() + InternalCameraOrigin.Z * FVector(0, 0, 1);
+	FVector StartRight = ((RightVector * (BBox.GetExtent().Y + 3.f)) + Location);
 	FVector EndRight = ((RightVector * MaxRaycastLengthSide) + StartRight);
 
-	FVector StartLeft = (-(RightVector * BBox.GetExtent().Y) + GetActorLocation());
+	FVector StartLeft = (-(RightVector * (BBox.GetExtent().Y + 3.f)) + Location);
 	FVector EndLeft = (-(RightVector * MaxRaycastLengthSide) + StartLeft);
 
 
@@ -102,12 +128,12 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 		if (OutHitRight.bBlockingHit && OutHitRight.GetActor() && OutHitLeft.bBlockingHit && OutHitLeft.GetActor())
 		{
 			percDst = -1 + (OutHitLeft.Distance / ((OutHitLeft.Distance + OutHitRight.Distance) / 2));
-
+			/*
 			if (GEngine) {
+				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Comp: %s"), *(EndRight - StartRight).ToString()));
+				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("SIDE perc: %s"), *FString::SanitizeFloat(percDst)));
 
-				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("SIDE perc: %s"), *FString::SanitizeFloat(percDst)));
-
-			}
+			}*/
 		}
 	}
 
@@ -119,11 +145,18 @@ void ANN_ControlledPawn::Tick(float Delta)
 	Super::Tick(Delta);
 
 	/*SENSORS-RAYCASTS*/
+	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation()+ 100 *GetActorForwardVector(), FColor::White, false, -1, 0, 5);
+	/*if (GEngine) {
+		FVector Fwd = GetActorForwardVector() * FVector(1,1,1);
+		FVector Rig = GetActorRightVector() * FVector(1, 1, 1);
 
+		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Comp: %s %s"), *Fwd.ToString(), *Rig.ToString()));
 
+	}*/
+	//GetInputsAsString();
 	/*@TODO: SEND INPUT TO PYTHON NN*/
+	
 }
-
 
 /*USE PYTHON OUTPUT*/
 void ANN_ControlledPawn::ActuateActions(float forward, float right)
@@ -136,5 +169,10 @@ void ANN_ControlledPawn::ActuateActions(float forward, float right)
 FString ANN_ControlledPawn::GetInputsAsString()
 {
 	float KPH = GetVehicleMovement()->GetForwardSpeed() * 0.036f;
-	return FString(FString::SanitizeFloat(KPH)+" "+ FString::SanitizeFloat(GetFrontDstPerc())+" "+ FString::SanitizeFloat(GetSideTrackPerc()));
+	return FString(FString::SanitizeFloat(KPH/94.f)+" "+ FString::SanitizeFloat(GetFrontDstPerc())+" "+ FString::SanitizeFloat(GetSideTrackPerc()));
+}
+
+float ANN_ControlledPawn::FitnessFunction(float x)
+{
+	return FMath::Exp(ShortestLapTime - x);
 }

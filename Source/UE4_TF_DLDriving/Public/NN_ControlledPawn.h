@@ -47,9 +47,15 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FString GetInputsAsString();
+
+	UFUNCTION()
+	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 protected:
 	virtual void BeginPlay() override;
 private:
 	float GetFrontDstPerc();
 	float GetSideTrackPerc();
+
+	float FitnessFunction(float x);
+	float ShortestLapTime;
 };

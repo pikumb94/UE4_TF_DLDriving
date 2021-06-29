@@ -31,7 +31,7 @@ class NNDriveCar:
         self.component = self.uobject.get_component_by_type(WheeledVehicleMovementComponent)
         print(self.pawn.functions())
         #print(self.uobject.properties())
-        self.uobject.SetComponentTickInterval(0.200)
+        #self.uobject.SetComponentTickInterval(0.100)
         #print(self.pawn.properties())
         #print(self.pawn.functions())
         
@@ -44,12 +44,13 @@ class NNDriveCar:
             SplitStr = SplitStr.astype(np.float32)
             x = tf.constant([SplitStr])
             y = self.model(x)
-            print('x:%s y:%s'%(type(x[0][0].numpy()),type(y[0][0].numpy())))
+            #print('x:%s y:%s'%(type(x[0][0].numpy()),type(y[0][0].numpy())))
             #print('x:',x[0][0],x[0][1],x[0][2])
             #print('y:',y[0][0],y[0][1])
             #print('x:%s'%(x.numpy()))
             #print('y:%s'%(y.numpy()))
-            self.pawn.ActuateActions(y[0][0],y[0][1])
+            #self.pawn.ActuateActions(y[0][0],y[0][1])
+            self.pawn.ActuateActions(1-max(0.0,y[0][0]),y[0][1])
     
     def LoadModel(self, NewModel):
         decodedWeights = json.loads(NewModel)
