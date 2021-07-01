@@ -39,6 +39,8 @@ class TestNE:
             print('TRIGGER')
             self.triggered = True
             self.you_pressed_K()
+            self.you_pressed_K()
+            self.you_pressed_K()
         
     
     def speak(self, words):
