@@ -11,6 +11,7 @@
 #include "AIController.h"
 #include "Components/PrimitiveComponent.h"
 #include "Engine/EngineTypes.h"
+#include "NE_Handler.h"
 
 ANN_ControlledPawn::ANN_ControlledPawn()
 {
@@ -18,14 +19,15 @@ ANN_ControlledPawn::ANN_ControlledPawn()
 	GetMesh()->SetMaterial(0, NNMaterial.Object);
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Vehicle, ECollisionResponse::ECR_Ignore);
 	MaxRaycastLengthFront = MaxRaycastLengthSide = 1000.f;
-
+	
 	PythonComp = CreateDefaultSubobject<UPythonComponent>(TEXT("PyComponent"));
 	PythonComp->PythonModule = PythonComp->PythonClass = "NNDriveCar";
 
 	GetMesh()->OnComponentHit.AddDynamic(this, &ANN_ControlledPawn::OnHit);
 	//TArray<FName> Names;
 	//GetMesh()->GetBoneNames(Names);
-	ShortestLapTime = 6.f;
+	ShortestLapTime = 10.f;
+	AgentIndex = -1;
 }
 
 void ANN_ControlledPawn::SetupPlayerInputComponent(UInputComponent* InpCmp)
@@ -48,6 +50,7 @@ void ANN_ControlledPawn::BeginPlay()
 	FActorSpawnParameters SpawnInfo;
 	AAIController* AIController = GetWorld()->SpawnActor<AAIController>(FVector::ZeroVector, FRotator::ZeroRotator,SpawnInfo);
 	AIController->Possess(this);
+
 }
 
 float ANN_ControlledPawn::GetFrontDstPerc()
@@ -77,7 +80,7 @@ float ANN_ControlledPawn::GetFrontDstPerc()
 			
 			if (GEngine) {
 
-				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("You are hitting: %s"), *OutHit.GetActor()->GetName()));
+				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("You are hitting: %s"), *OutHit.GetActor()->GetName()));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Impact Point: %s"), *FString::SanitizeFloat(OutHit.Distance)));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Front Perc: %s"), *FString::SanitizeFloat(percDst)));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Comp: %s"), *(End-Start).ToString()));
@@ -95,7 +98,10 @@ void ANN_ControlledPawn::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherA
 
 	}
 	//NOTIFY PYTHON OF YOUR SCORE
-	FitnessFunction(GetGameTimeSinceCreation());
+	int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
+	Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, FitnessFunction(GetGameTimeSinceCreation()));
+
+	Destroy();
 }
 
 float ANN_ControlledPawn::GetSideTrackPerc()
@@ -131,8 +137,8 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 			percDst = -1 + (OutHitLeft.Distance / ((OutHitLeft.Distance + OutHitRight.Distance) / 2));
 			
 			if (GEngine) {
-				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, FString::Printf(TEXT("You are hitting: %s"), *OutHitRight.GetActor()->GetName()));
-				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("You are hitting: %s"), *OutHitLeft.GetActor()->GetName()));
+				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, FString::Printf(TEXT("You are hitting: %s"), *OutHitRight.GetActor()->GetName()));
+				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("You are hitting: %s"), *OutHitLeft.GetActor()->GetName()));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Comp: %s"), *(EndRight - StartRight).ToString()));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("SIDE perc: %s"), *FString::SanitizeFloat(percDst)));
 
@@ -177,5 +183,5 @@ FString ANN_ControlledPawn::GetInputsAsString()
 
 float ANN_ControlledPawn::FitnessFunction(float x)
 {
-	return FMath::Exp(ShortestLapTime - x);
+	return 1/FMath::Exp(ShortestLapTime - x);
 }

@@ -1085,7 +1085,9 @@ PyObject *py_ue_broadcast(ue_PyUObject *self, PyObject *args)
 	if (auto casted_prop = Cast<UMulticastDelegateProperty>(u_property))
 	{
 #if ENGINE_MINOR_VERSION >= 23
-		FMulticastScriptDelegate multiscript_delegate = *casted_prop->GetMulticastDelegate(self->ue_object);
+		//@FUNZIONE PRECEDENTE:FMulticastScriptDelegate multiscript_delegate = *casted_prop->GetMulticastDelegate(self->ue_object);
+		FMulticastScriptDelegate multiscript_delegate = *casted_prop->GetMulticastDelegate(casted_prop->ContainerPtrToValuePtr<void>(self->ue_object));
+
 #else
 		FMulticastScriptDelegate multiscript_delegate = casted_prop->GetPropertyValue_InContainer(self->ue_object);
 #endif

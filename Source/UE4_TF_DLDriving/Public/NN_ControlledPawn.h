@@ -6,18 +6,16 @@
 #include "UE4_TF_DLDrivingPawn.h"
 #include "NN_ControlledPawn.generated.h"
 
-/**
- * 
- */
+
 UCLASS()
 class UE4_TF_DLDRIVING_API ANN_ControlledPawn : public AUE4_TF_DLDrivingPawn
 {
 	GENERATED_BODY()
 
-	UPROPERTY(Category = Component, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	class UPythonComponent* PythonComp;
+
 
 public:
+
 	ANN_ControlledPawn();
 
 	// Begin Pawn interface
@@ -50,12 +48,16 @@ public:
 
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
+	UPROPERTY(Category = Component, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	class UPythonComponent* PythonComp;
+
 protected:
 	virtual void BeginPlay() override;
 private:
 	float GetFrontDstPerc();
 	float GetSideTrackPerc();
-
+	int AgentIndex;
 	float FitnessFunction(float x);
 	float ShortestLapTime;
 };
