@@ -26,8 +26,12 @@ ANN_ControlledPawn::ANN_ControlledPawn()
 	GetMesh()->OnComponentHit.AddDynamic(this, &ANN_ControlledPawn::OnHit);
 	//TArray<FName> Names;
 	//GetMesh()->GetBoneNames(Names);
-	ShortestLapTime = 10.f;
+	ShortestLapTime = 20.f;
 	AgentIndex = -1;
+	//OnEndPlay.AddDynamic(this, &ANN_ControlledPawn::EndPlayHandler);
+	MinVelocityThreshold = 2.5;
+	MaxLifetimeLowVelocity = 3;
+	MaxLifetime = 40;
 }
 
 void ANN_ControlledPawn::SetupPlayerInputComponent(UInputComponent* InpCmp)
@@ -36,6 +40,14 @@ void ANN_ControlledPawn::SetupPlayerInputComponent(UInputComponent* InpCmp)
 		Super::SetupPlayerInputComponent(InpCmp);
 	else
 		AWheeledVehicle::SetupPlayerInputComponent(InpCmp);
+}
+
+void ANN_ControlledPawn::EndPlayHandler(AActor* Actor, EEndPlayReason::Type EndPlayReason)
+{
+
+	int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
+	Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, FitnessFunction(GetGameTimeSinceCreation()));
+
 }
 
 void ANN_ControlledPawn::BeginPlay()
@@ -100,7 +112,6 @@ void ANN_ControlledPawn::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherA
 	//NOTIFY PYTHON OF YOUR SCORE
 	int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
 	Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, FitnessFunction(GetGameTimeSinceCreation()));
-
 	Destroy();
 }
 
@@ -152,7 +163,23 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 void ANN_ControlledPawn::Tick(float Delta)
 {
 	Super::Tick(Delta);
+	MaxLifetime -= Delta;
+	if (GetVehicleMovement()->GetForwardSpeed() * 0.036f < MinVelocityThreshold ) {
+		MaxLifetimeLowVelocity -= Delta;
+	}
 
+	if (MaxLifetime < 0) {
+		int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
+		Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, -1);
+		Destroy();
+
+	}
+	if (MaxLifetimeLowVelocity < 0) {
+		int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
+		Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, -10);
+		Destroy();
+
+	}
 	/*SENSORS-RAYCASTS*/
 	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation()+ 100 *GetActorForwardVector(), FColor::White, false, -1, 0, 5);
 	/*if (GEngine) {

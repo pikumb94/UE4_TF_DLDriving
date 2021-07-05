@@ -9,6 +9,7 @@ from unreal_engine.classes import NE_Handler
 from unreal_engine import FVector, FRotator, FTransform, FHitResult
 from unreal_engine.classes import ActorComponent, PythonComponent
 from collections.abc import Iterable
+import pathlib
 
 def Flatten(NN):
   fl_weights = NN
@@ -131,8 +132,8 @@ ks.clear_session()
 #print(tf.version.VERSION)
 
 #Evolution Part|| Data: N: number of generations, S: population size, E: elitism rate, C: crossover rate, M: mutation rate; K: percentage of ways in tournament selection
-N=5       #200
-S=10       #100
+N=100       #200
+S=50       #100
 E=0.5     #0.5
 C=0.6
 M=0.1#0.1
@@ -169,7 +170,7 @@ class NEHandler:
 
   def RequestComputeAllFitness(self):
     global NNs_Population
-    print('RequestComputeAllFitness')
+    #print('RequestComputeAllFitness')
     NNs_lenght = len(NNs_Population)
     self.uobject.GetOwner().broadcast('OnStartFitnessComputation')
     #print(self.uobject.GetOwner().functions())
@@ -180,10 +181,9 @@ class NEHandler:
   def ReceivedAllFitness(self, StringifiedFitnesses):#UE4 ha computato tutte le fitness!
     global NNs_Population
     #decode result from UE4: is a JSON with each element a fitness value!
-    print('ReceivedAllFitness')
+    #print('ReceivedAllFitness')
     BatchFitnesses = [float(x) for x in StringifiedFitnesses.split()]
     BF_lenght = len(BatchFitnesses)
-    print(BF_lenght)
     NNs_lenght = len(NNs_Population)
     print(NNs_lenght)
     for i in range(0, NNs_lenght):
@@ -208,6 +208,7 @@ class NEHandler:
   def ExecuteNeuroevolutionStep(self):
     global NNs_Population
     print('ExecuteNeuroevolutionStep')
+    print(self.NESteps)
     if(self.NESteps<N):
         NNs_Population = NNs_Population[:int(E*S)]#Survivor selection: apply elitism
         for j in range(0, int(C*S)):
@@ -225,4 +226,8 @@ class NEHandler:
         self.RequestComputeAllFitness()
         
     else:
+      Wpath = pathlib.Path(__file__).parent.resolve() 
+      path = str(Wpath) + '/BestModel'
+      self.NNmodel.set_weights(NNs_Population[0][0])
+      self.NNmodel.save(path)
       print('Finito!')

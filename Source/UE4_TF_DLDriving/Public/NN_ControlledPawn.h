@@ -52,12 +52,19 @@ public:
 	UPROPERTY(Category = Component, VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	class UPythonComponent* PythonComp;
 
+	UFUNCTION()
+	void EndPlayHandler(AActor* Actor, EEndPlayReason::Type EndPlayReason);
+
 protected:
 	virtual void BeginPlay() override;
 private:
 	float GetFrontDstPerc();
 	float GetSideTrackPerc();
-	int AgentIndex;
 	float FitnessFunction(float x);
+
+	int AgentIndex;
+	float MinVelocityThreshold;
 	float ShortestLapTime;
+	float MaxLifetime;
+	float MaxLifetimeLowVelocity;
 };
