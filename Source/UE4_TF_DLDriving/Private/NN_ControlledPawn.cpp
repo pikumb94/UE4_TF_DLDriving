@@ -24,10 +24,12 @@ ANN_ControlledPawn::ANN_ControlledPawn()
 	PythonComp->PythonModule = PythonComp->PythonClass = "NNDriveCar";
 
 	GetMesh()->OnComponentHit.AddDynamic(this, &ANN_ControlledPawn::OnHit);
+	OnActorBeginOverlap.AddDynamic(this, &ANN_ControlledPawn::OverlapHandler);
+
 	//TArray<FName> Names;
 	//GetMesh()->GetBoneNames(Names);
 	ShortestLapTime = 20.f;
-	AgentIndex = -1;
+	//AgentIndex = -1;
 	//OnEndPlay.AddDynamic(this, &ANN_ControlledPawn::EndPlayHandler);
 	MinVelocityThreshold = 2.5;
 	MaxLifetimeLowVelocity = 3;
@@ -42,11 +44,16 @@ void ANN_ControlledPawn::SetupPlayerInputComponent(UInputComponent* InpCmp)
 		AWheeledVehicle::SetupPlayerInputComponent(InpCmp);
 }
 
-void ANN_ControlledPawn::EndPlayHandler(AActor* Actor, EEndPlayReason::Type EndPlayReason)
+void ANN_ControlledPawn::OverlapHandler(AActor* OverlappedActor, AActor* OtherActor)
 {
-
-	int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
-	Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, FitnessFunction(GetGameTimeSinceCreation()));
+	//Agent reaches the end line
+	if (!OtherActor->GetName().Compare(FString("FinishLine"))) {
+		int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
+		if (AgentIndex >= 0) {
+			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, 9.f * FMath::Exp((-0.2f * GetGameTimeSinceCreation())) + 1.f);
+			Destroy();
+		}
+	}
 
 }
 
@@ -110,9 +117,12 @@ void ANN_ControlledPawn::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherA
 
 	}
 	//NOTIFY PYTHON OF YOUR SCORE
+	//Agent hits a wall
 	int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
-	Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, FitnessFunction(GetGameTimeSinceCreation()));
-	Destroy();
+	if (AgentIndex >= 0) {
+		Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, FitnessFunction(GetGameTimeSinceCreation()));
+		Destroy();
+	}
 }
 
 float ANN_ControlledPawn::GetSideTrackPerc()
@@ -169,17 +179,25 @@ void ANN_ControlledPawn::Tick(float Delta)
 	}
 
 	if (MaxLifetime < 0) {
+		
 		int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
-		Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, -1);
-		Destroy();
+		if (AgentIndex >= 0) {
+			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, FitnessFunction(GetGameTimeSinceCreation()));
+			Destroy();
+		}
 
 	}
+
 	if (MaxLifetimeLowVelocity < 0) {
+		//Agent is too slow
 		int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
-		Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, -10);
-		Destroy();
+		if (AgentIndex >= 0) {
+			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, -1.f);
+			Destroy();
+		}
 
 	}
+
 	/*SENSORS-RAYCASTS*/
 	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation()+ 100 *GetActorForwardVector(), FColor::White, false, -1, 0, 5);
 	/*if (GEngine) {
@@ -210,5 +228,5 @@ FString ANN_ControlledPawn::GetInputsAsString()
 
 float ANN_ControlledPawn::FitnessFunction(float x)
 {
-	return 1/FMath::Exp(ShortestLapTime - x);
+	return x/MaxLifetime;//1/FMath::Exp(ShortestLapTime - x);
 }

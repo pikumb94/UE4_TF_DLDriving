@@ -129,19 +129,19 @@ class NumpyArrayEncoder(JSONEncoder):
 #@title Testo del titolo predefinito
 #Define the NN
 ks.clear_session()
-#print(tf.version.VERSION)
+print('NEHandler')
 
 #Evolution Part|| Data: N: number of generations, S: population size, E: elitism rate, C: crossover rate, M: mutation rate; K: percentage of ways in tournament selection
-N=100       #200
-S=50       #100
+N=3       #200
+S=5       #100
 E=0.5     #0.5
 C=0.6
 M=0.1#0.1
 K=0.25
 
 NN_topology = [tf.keras.layers.Dense(3, activation=tf.nn.tanh),
-tf.keras.layers.Dense(4, activation=tf.nn.tanh),
-tf.keras.layers.Dense(4, activation=tf.nn.tanh),
+#tf.keras.layers.Dense(4, activation=tf.nn.tanh),
+#tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(2, activation=tf.nn.tanh)]
 
 NNs_Population=[]
@@ -189,7 +189,7 @@ class NEHandler:
     for i in range(0, NNs_lenght):
       new_tuple = (NNs_Population[i][0],BatchFitnesses[i])
       NNs_Population[i]=new_tuple#TODO: evaluate fitness for all current population
-    NNs_Population.sort(key=lambda x: x[1])
+    NNs_Population.sort(key=lambda x: x[1], reverse=True)
     self.ExecuteNeuroevolutionStep()
 
   def getWeigthsInPopulation(self,index):
@@ -226,8 +226,11 @@ class NEHandler:
         self.RequestComputeAllFitness()
         
     else:
+      for i in range(0, len(NNs_Population)):
+        print(NNs_Population[i][0])
+        print(NNs_Population[i][1])
       Wpath = pathlib.Path(__file__).parent.resolve() 
       path = str(Wpath) + '/BestModel'
       self.NNmodel.set_weights(NNs_Population[0][0])
-      self.NNmodel.save(path)
+      self.NNmodel.save_weights(path)
       print('Finito!')

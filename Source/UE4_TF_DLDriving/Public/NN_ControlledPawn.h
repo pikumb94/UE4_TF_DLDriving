@@ -53,7 +53,7 @@ public:
 	class UPythonComponent* PythonComp;
 
 	UFUNCTION()
-	void EndPlayHandler(AActor* Actor, EEndPlayReason::Type EndPlayReason);
+	void OverlapHandler(AActor* OverlappedActor, AActor* OtherActor);
 
 protected:
 	virtual void BeginPlay() override;
@@ -62,7 +62,7 @@ private:
 	float GetSideTrackPerc();
 	float FitnessFunction(float x);
 
-	int AgentIndex;
+	//int AgentIndex;
 	float MinVelocityThreshold;
 	float ShortestLapTime;
 	float MaxLifetime;

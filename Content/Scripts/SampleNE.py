@@ -57,13 +57,6 @@ class TestNE:
         #print(component.functions())
 
 
-
-
-
-
-
-
-
 class NumpyArrayEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):

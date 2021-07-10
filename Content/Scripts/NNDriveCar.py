@@ -10,10 +10,10 @@ from collections.abc import Iterable   # import directly from collections for Py
 from unreal_engine.classes import WheeledVehicleMovementComponent
 
 NN_topology = [tf.keras.layers.Dense(3, activation=tf.nn.tanh),
-tf.keras.layers.Dense(4, activation=tf.nn.tanh),
-tf.keras.layers.Dense(4, activation=tf.nn.tanh),
+#tf.keras.layers.Dense(4, activation=tf.nn.tanh),
+#tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(2, activation=tf.nn.tanh)]
-
+#print('NNDriveCar')
 class NNDriveCar:
 
     def __init__(self):
@@ -22,6 +22,7 @@ class NNDriveCar:
         self.model(tf.constant([[0.0,0.0,0.0]]))
         self.bModelLoaded = False
         self.bTopologyLoaded = True
+        self.index = -1
         
     # this is called on game start
     def begin_play(self):
