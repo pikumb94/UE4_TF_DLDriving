@@ -3,12 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UE4_TF_DLDrivingPawn.h"
+#include "DrivingPawnMinimal.h"
+//#include "UE4_TF_DLDrivingPawn.h"
 #include "NN_ControlledPawn.generated.h"
 
 
 UCLASS()
-class UE4_TF_DLDRIVING_API ANN_ControlledPawn : public AUE4_TF_DLDrivingPawn
+class UE4_TF_DLDRIVING_API ANN_ControlledPawn : public ADrivingPawnMinimal //AUE4_TF_DLDrivingPawn
 {
 	GENERATED_BODY()
 
@@ -60,11 +61,16 @@ protected:
 private:
 	float GetFrontDstPerc();
 	float GetSideTrackPerc();
-	float FitnessFunction(float x);
+	float FitnessFunctionSurvive(float x);
+	float FitnessFunctionPerform(float x);
+	float FitnessFunction2(float x, float s=1);
 
 	//int AgentIndex;
 	float MinVelocityThreshold;
 	float ShortestLapTime;
 	float MaxLifetime;
+	float MaxLifetimeConst;
 	float MaxLifetimeLowVelocity;
+	float CumulatedFitness;
+	bool CheckpointOverlap;
 };

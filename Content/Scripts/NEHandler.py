@@ -11,6 +11,8 @@ from unreal_engine.classes import ActorComponent, PythonComponent
 from collections.abc import Iterable
 import pathlib
 
+
+
 def Flatten(NN):
   fl_weights = NN
   v=np.empty()
@@ -93,13 +95,25 @@ def Two_Point_Crossover(Ws_NN1,Ws_NN2):
     c2=np.concatenate((v2[:p2],v1[p2:p1],v2[p1:]))
 
   return [c1,c2]
-    
+
+def N_Point_Crossover(Ws_NN1,Ws_NN2):
+  v1=RecFlatten(Ws_NN1)
+  v2=RecFlatten(Ws_NN2)
+  c1=v1
+  c2=v2
+  for i in range(0,int(v1.size/2)):
+    tmp = c1[i*2]
+    c1[i*2] = c2[i*2]
+    c2[i*2] = tmp
+
+  return [c1,c2]
+
 def Tournament_Selection(NNs,k):
   BestParent = NNs[np.random.randint(0, len(NNs))]
   for i in range(int(k-1)):
     Parent = NNs[np.random.randint(0, len(NNs))]
-    BestParent = (Parent[1]>BestParent[1] if Parent else BestParent)
-  
+    if Parent[1]>BestParent[1]:
+      BestParent = Parent  
   return BestParent
 
 def Mutate(Weights,pM):
@@ -107,7 +121,7 @@ def Mutate(Weights,pM):
     #print(length)
     for i in range(length):
       if np.random.binomial(1, pM, 1)[0] == 1:
-         Weights[i] = Weights[i]+np.random.normal()
+         Weights[i] = Weights[i]+np.random.normal()#np.random.normal(scale=1.5)
     
     return Weights
 
@@ -119,6 +133,11 @@ def reset_weights(model):
           if hasattr(v_arg,'initializer'):
               initializer_method = getattr(v_arg, 'initializer')
               initializer_method.run(session=session)
+
+def scatter_weights(model,M):
+  v=RecFlatten(model.get_weights())
+  vM = Mutate(v,M)
+  return DeFlattenWTopology(model,vM)
 
 class NumpyArrayEncoder(JSONEncoder):
     def default(self, obj):
@@ -132,16 +151,16 @@ ks.clear_session()
 print('NEHandler')
 
 #Evolution Part|| Data: N: number of generations, S: population size, E: elitism rate, C: crossover rate, M: mutation rate; K: percentage of ways in tournament selection
-N=3       #200
-S=5       #100
-E=0.5     #0.5
-C=0.6
-M=0.1#0.1
-K=0.25
+N=100           #100
+S=50            #50
+E=0.5           #0.5
+C=0.6          #0.6
+M=0.2          #0.1
+K=0.2          #0.25
 
 NN_topology = [tf.keras.layers.Dense(3, activation=tf.nn.tanh),
-#tf.keras.layers.Dense(4, activation=tf.nn.tanh),
-#tf.keras.layers.Dense(4, activation=tf.nn.tanh),
+tf.keras.layers.Dense(4, activation=tf.nn.tanh),
+tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(2, activation=tf.nn.tanh)]
 
 NNs_Population=[]
@@ -155,6 +174,9 @@ class NEHandler:
     self.NNmodel = tf.keras.models.Sequential(NN_topology)
     y=self.NNmodel(tf.zeros((1, 3)))
     
+    self.BestFitness=0
+    self.BestModel = self.NNmodel.get_weights()
+    
   def get_PopulationSize(self):
     return len(NNs_Population)
     
@@ -162,10 +184,10 @@ class NEHandler:
     for i in range(S):
       ks.clear_session()
       model = tf.keras.models.clone_model(self.NNmodel)
-
       x = tf.zeros((1, 3))
       y = model(x)
-      NNs_Population.append((model.get_weights(),np.random.uniform()))#Initialize with random fitness
+            
+      NNs_Population.append((scatter_weights(model,.75),.0))#Initialize with random fitness
     self.RequestComputeAllFitness()
 
   def RequestComputeAllFitness(self):
@@ -185,7 +207,7 @@ class NEHandler:
     BatchFitnesses = [float(x) for x in StringifiedFitnesses.split()]
     BF_lenght = len(BatchFitnesses)
     NNs_lenght = len(NNs_Population)
-    print(NNs_lenght)
+    #print(NNs_lenght)
     for i in range(0, NNs_lenght):
       new_tuple = (NNs_Population[i][0],BatchFitnesses[i])
       NNs_Population[i]=new_tuple#TODO: evaluate fitness for all current population
@@ -207,15 +229,26 @@ class NEHandler:
 
   def ExecuteNeuroevolutionStep(self):
     global NNs_Population
-    print('ExecuteNeuroevolutionStep')
-    print(self.NESteps)
+    #print('ExecuteNeuroevolutionStep')
+    if(NNs_Population[0][1] > self.BestFitness):
+      self.BestModel = NNs_Population[0][0]
+      self.BestFitness = NNs_Population[0][1]
+    
+    print(f"Generation: {self.NESteps}")
     if(self.NESteps<N):
         NNs_Population = NNs_Population[:int(E*S)]#Survivor selection: apply elitism
+        for i in range(0, len(NNs_Population)):
+          print(NNs_Population[i][1])
+        
         for j in range(0, int(C*S)):
-          FatherNN = Tournament_Selection(NNs_Population,K)
-          MotherNN = Tournament_Selection(NNs_Population,K)
-
-          ChildrenWeights = Two_Point_Crossover(FatherNN[0],MotherNN[0])#Crossover
+          FatherNN = Tournament_Selection(NNs_Population,K*S)
+          MotherNN = Tournament_Selection(NNs_Population,K*S)
+          
+          ChildrenWeights=[]
+          if(j%2==0):
+            ChildrenWeights = Two_Point_Crossover(FatherNN[0],MotherNN[0])#Crossover
+          else:
+            ChildrenWeights = N_Point_Crossover(FatherNN[0],MotherNN[0])#Crossover
           ChildrenWeights = (Mutate(ChildrenWeights[0],M),Mutate(ChildrenWeights[1],M))#Mutation with probability M
 
           Child1 = DeFlattenWTopology(self.NNmodel,ChildrenWeights[0])
@@ -226,11 +259,25 @@ class NEHandler:
         self.RequestComputeAllFitness()
         
     else:
+      print(self.BestModel)
+      print(self.BestFitness)
       for i in range(0, len(NNs_Population)):
         print(NNs_Population[i][0])
         print(NNs_Population[i][1])
+        
       Wpath = pathlib.Path(__file__).parent.resolve() 
-      path = str(Wpath) + '/BestModel'
+      path = str(Wpath) + '/Model'
+      self.NNmodel.set_weights(self.BestModel)
+      self.NNmodel.save_weights(path+'Best')
+      
       self.NNmodel.set_weights(NNs_Population[0][0])
-      self.NNmodel.save_weights(path)
+      self.NNmodel.save_weights(path+'1')
+      self.NNmodel.set_weights(NNs_Population[1][0])
+      self.NNmodel.save_weights(path+'2')
+      self.NNmodel.set_weights(NNs_Population[2][0])
+      self.NNmodel.save_weights(path+'3')
+      self.NNmodel.set_weights(NNs_Population[3][0])
+      self.NNmodel.save_weights(path+'4')
+      self.NNmodel.set_weights(NNs_Population[4][0])
+      self.NNmodel.save_weights(path+'5')
       print('Finito!')

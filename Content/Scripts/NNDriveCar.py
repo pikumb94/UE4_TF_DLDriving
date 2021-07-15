@@ -10,8 +10,8 @@ from collections.abc import Iterable   # import directly from collections for Py
 from unreal_engine.classes import WheeledVehicleMovementComponent
 
 NN_topology = [tf.keras.layers.Dense(3, activation=tf.nn.tanh),
-#tf.keras.layers.Dense(4, activation=tf.nn.tanh),
-#tf.keras.layers.Dense(4, activation=tf.nn.tanh),
+tf.keras.layers.Dense(4, activation=tf.nn.tanh),
+tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(2, activation=tf.nn.tanh)]
 #print('NNDriveCar')
 class NNDriveCar:
@@ -30,14 +30,14 @@ class NNDriveCar:
         self.component = self.uobject.get_component_by_type(WheeledVehicleMovementComponent)
         #print(self.pawn.functions())
         #print(self.uobject.properties())
-        #self.uobject.SetComponentTickInterval(0.100)
+        self.uobject.SetComponentTickInterval(0.100)
         #print(self.pawn.properties())
         #print(self.pawn.functions())
         
     # this is called at every 'tick'    
     def tick(self, delta_time):
         SplitStr = self.pawn.GetInputsAsString().split()
-        
+        #print(delta_time)
         if(self.bModelLoaded):
             SplitStr = np.array(SplitStr)
             SplitStr = SplitStr.astype(np.float32)
@@ -48,8 +48,8 @@ class NNDriveCar:
             #print('y:',y[0][0],y[0][1])
             #print('x:%s'%(x.numpy()))
             #print('y:%s'%(y.numpy()))
-            #self.pawn.ActuateActions(y[0][0],y[0][1])
-            self.pawn.ActuateActions(1-max(0.0,y[0][0]),y[0][1])
+            self.pawn.ActuateActions(y[0][0],y[0][1])
+            #self.pawn.ActuateActions(1-max(0.0,y[0][0]),y[0][1])
     
     def SetIndex(self, index):
         self.index = int(index)

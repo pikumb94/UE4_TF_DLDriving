@@ -49,11 +49,11 @@ void ANE_Handler::OnStartFitnessHandler()
 
 void ANE_Handler::AgentFitnessReturned(int index, float fitness)
 {
-	if (GEngine) {
+	/*if (GEngine) {
 
 		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("MORTO! %d"), NNNum));
 
-	}
+	}*/
 
 	PopulationFitness[index] = fitness;
 

@@ -18,7 +18,7 @@ ANN_ControlledPawn::ANN_ControlledPawn()
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> NNMaterial(TEXT("/Game/VehicleAdv/Materials/MaterialInstances/Template_BaseOrange.Template_BaseOrange"));
 	GetMesh()->SetMaterial(0, NNMaterial.Object);
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Vehicle, ECollisionResponse::ECR_Ignore);
-	MaxRaycastLengthFront = MaxRaycastLengthSide = 1000.f;
+	MaxRaycastLengthFront = MaxRaycastLengthSide = 2500.f;
 	
 	PythonComp = CreateDefaultSubobject<UPythonComponent>(TEXT("PyComponent"));
 	PythonComp->PythonModule = PythonComp->PythonClass = "NNDriveCar";
@@ -28,12 +28,16 @@ ANN_ControlledPawn::ANN_ControlledPawn()
 
 	//TArray<FName> Names;
 	//GetMesh()->GetBoneNames(Names);
-	ShortestLapTime = 20.f;
+	ShortestLapTime = 20.f;//MAI USATO
 	//AgentIndex = -1;
 	//OnEndPlay.AddDynamic(this, &ANN_ControlledPawn::EndPlayHandler);
-	MinVelocityThreshold = 2.5;
-	MaxLifetimeLowVelocity = 3;
-	MaxLifetime = 40;
+	//Check on Agent going at low speed
+	MinVelocityThreshold = 7.f;
+	MaxLifetimeLowVelocity = 2.f;
+
+	MaxLifetime = MaxLifetimeConst = ShortestLapTime*1.5f;
+	CumulatedFitness = 0.f;
+	CheckpointOverlap = false;
 }
 
 void ANN_ControlledPawn::SetupPlayerInputComponent(UInputComponent* InpCmp)
@@ -47,12 +51,36 @@ void ANN_ControlledPawn::SetupPlayerInputComponent(UInputComponent* InpCmp)
 void ANN_ControlledPawn::OverlapHandler(AActor* OverlappedActor, AActor* OtherActor)
 {
 	//Agent reaches the end line
-	if (!OtherActor->GetName().Compare(FString("FinishLine"))) {
+	if (OtherActor->GetName().Contains(FString("FinishLine")) && CheckpointOverlap) {
 		int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
 		if (AgentIndex >= 0) {
-			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, 9.f * FMath::Exp((-0.2f * GetGameTimeSinceCreation())) + 1.f);
+
+			float fitness = 0.f;
+			fitness = FitnessFunctionPerform(CumulatedFitness);
+
+
+			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, fitness);
 			Destroy();
 		}
+	}
+
+	if (OtherActor->GetName().Contains(FString("FinishLine")) && !CheckpointOverlap) {
+		int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
+		if (AgentIndex >= 0) {
+			float fitness = -10.f;
+			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, fitness);
+			Destroy();
+		}
+	}
+
+	if (OtherActor->GetName().Contains(FString("Checkpoint"))) {
+		CheckpointOverlap = true;
+		/*int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
+		if (AgentIndex >= 0) {
+			float fit = GetGameTimeSinceCreation();
+			float temp = FitnessFunction2(fit, 2.f);
+			CumulatedFitness = temp;
+		}*/
 	}
 
 }
@@ -83,14 +111,14 @@ float ANN_ControlledPawn::GetFrontDstPerc()
 	FVector ForwardVector = GetActorForwardVector();
 	ForwardVector.Z = 0.0f;
 	ForwardVector.Normalize();
-	FVector Location = GetActorLocation()+ InternalCameraOrigin.Z* FVector(0,0,1);
+	FVector Location = GetActorLocation()+ 50.0f * FVector(0,0,1);//InternalCameraOrigin.Z =50 for UE4_DrivingPawn!
 	FVector Start = ((ForwardVector * (BBox.GetExtent().X+2.5f)) + Location);
 	FVector End = ((ForwardVector * MaxRaycastLengthFront) + Start);
 
 	float percDst = 0.0;
 
 
-	DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, -1, 0, 5);
+	//DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, -1, 0, 5);
 	if (GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECollisionChannel::ECC_Vehicle, CollisionParams))
 	{
 		if (OutHit.bBlockingHit && OutHit.GetActor())
@@ -111,18 +139,41 @@ float ANN_ControlledPawn::GetFrontDstPerc()
 
 void ANN_ControlledPawn::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
+	/*
 	if (GEngine) {
-
+		int SectionIndex=1;
+		auto Material = OtherComp->GetMaterialFromCollisionFaceIndex(Hit.FaceIndex, SectionIndex);
+		auto PhysMaterial = Hit.Component.Get()->GetMaterial(0);
+		if (Material && PhysMaterial) {
+			//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Comp: %s %s"), *Material->GetName(), *PhysMaterial->GetName()));
+		}
 		//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Comp: %s %s %s"), *Hit.BoneName.ToString(), *Hit.MyBoneName.ToString(), *HitComponent->GetName()));
 
-	}
+	}*/
 	//NOTIFY PYTHON OF YOUR SCORE
-	//Agent hits a wall
-	int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
-	if (AgentIndex >= 0) {
-		Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, FitnessFunction(GetGameTimeSinceCreation()));
-		Destroy();
+	//Prev
+	if (!OtherActor->GetName().Contains(FString("Prevent"))) {
+		//Agent hits a wall
+		//Prev
+		int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
+		if (AgentIndex >= 0) {
+
+			float fitness = 0.f;
+			if (CheckpointOverlap) {
+				fitness = 1.f + 0.1f * FitnessFunctionPerform(CumulatedFitness);
+			}
+			else {
+				fitness = FitnessFunctionSurvive(CumulatedFitness);
+			}
+
+			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, fitness);
+			Destroy();
+		}
 	}
+
+	//else {
+	//	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Comp: %s"), *OtherActor->GetName()));
+	//}
 }
 
 float ANN_ControlledPawn::GetSideTrackPerc()
@@ -138,7 +189,7 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 	FVector RightVector = GetActorRightVector();
 	RightVector.Z = 0.0f;
 	RightVector.Normalize();
-	FVector Location = GetActorLocation() + InternalCameraOrigin.Z * FVector(0, 0, 1);
+	FVector Location = GetActorLocation() + 50.0f * FVector(0, 0, 1);
 	FVector StartRight = ((RightVector * (BBox.GetExtent().Y + 3.f)) + Location);
 	FVector EndRight = ((RightVector * MaxRaycastLengthSide) + StartRight);
 
@@ -148,8 +199,8 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 
 	float percDst = 0.0;
 
-	DrawDebugLine(GetWorld(), StartRight, EndRight, FColor::Yellow, false, -1, 0, 5);
-	DrawDebugLine(GetWorld(), StartLeft, EndLeft, FColor::Green, false, -1, 0, 5);
+	//DrawDebugLine(GetWorld(), StartRight, EndRight, FColor::Yellow, false, -1, 0, 5);
+	//DrawDebugLine(GetWorld(), StartLeft, EndLeft, FColor::Green, false, -1, 0, 5);
 
 	if (GetWorld()->LineTraceSingleByChannel(OutHitRight, StartRight, EndRight, ECollisionChannel::ECC_Vehicle, CollisionParams) && GetWorld()->LineTraceSingleByChannel(OutHitLeft, StartLeft, EndLeft, ECollisionChannel::ECC_Vehicle, CollisionParams))
 	{
@@ -173,6 +224,12 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 void ANN_ControlledPawn::Tick(float Delta)
 {
 	Super::Tick(Delta);
+
+	if (GetVehicleMovement()->GetForwardSpeed() >= 0)
+		CumulatedFitness += Delta;
+	else
+		CumulatedFitness -= Delta;
+
 	MaxLifetime -= Delta;
 	if (GetVehicleMovement()->GetForwardSpeed() * 0.036f < MinVelocityThreshold ) {
 		MaxLifetimeLowVelocity -= Delta;
@@ -182,7 +239,18 @@ void ANN_ControlledPawn::Tick(float Delta)
 		
 		int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
 		if (AgentIndex >= 0) {
-			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, FitnessFunction(GetGameTimeSinceCreation()));
+
+			float fitness = 0.f;
+			if (CheckpointOverlap) {
+				fitness = 1.f+0.1f*FitnessFunctionPerform(CumulatedFitness);
+			}
+			else {
+				fitness = FitnessFunctionSurvive(CumulatedFitness);
+			}
+
+			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, fitness);
+
+			//Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, FitnessFunction(GetGameTimeSinceCreation()));
 			Destroy();
 		}
 
@@ -192,7 +260,8 @@ void ANN_ControlledPawn::Tick(float Delta)
 		//Agent is too slow
 		int AgentIndex = PythonComp->CallPythonComponentMethodInt(FString("GetIndex"), FString());
 		if (AgentIndex >= 0) {
-			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, -1.f);
+			float fitness = -5.f;
+			Cast<ANE_Handler>(GetOwner())->OnAgentFitnessComputed.Broadcast(AgentIndex, fitness);
 			Destroy();
 		}
 
@@ -201,10 +270,9 @@ void ANN_ControlledPawn::Tick(float Delta)
 	/*SENSORS-RAYCASTS*/
 	//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation()+ 100 *GetActorForwardVector(), FColor::White, false, -1, 0, 5);
 	/*if (GEngine) {
-		FVector Fwd = GetActorForwardVector() * FVector(1,1,1);
-		FVector Rig = GetActorRightVector() * FVector(1, 1, 1);
-
-		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Comp: %s %s"), *Fwd.ToString(), *Rig.ToString()));
+		//FVector Fwd = GetActorForwardVector() * FVector(1,1,1);
+		//FVector Rig = GetActorRightVector() * FVector(1, 1, 1);
+		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Comp: %s "), *FString::SanitizeFloat(temp)));
 
 	}*/
 	//GetInputsAsString();
@@ -226,7 +294,19 @@ FString ANN_ControlledPawn::GetInputsAsString()
 	return FString(FString::SanitizeFloat(KPH/94.f)+" "+ FString::SanitizeFloat(GetFrontDstPerc())+" "+ FString::SanitizeFloat(GetSideTrackPerc()));
 }
 
-float ANN_ControlledPawn::FitnessFunction(float x)
+float ANN_ControlledPawn::FitnessFunctionSurvive(float x)
 {
-	return x/MaxLifetime;//1/FMath::Exp(ShortestLapTime - x);
+	return x/ MaxLifetimeConst;//1/FMath::Exp(ShortestLapTime - x);
+}
+
+float ANN_ControlledPawn::FitnessFunctionPerform(float x)
+{
+	return MaxLifetimeConst /x;//1/FMath::Exp(ShortestLapTime - x);
+}
+
+float ANN_ControlledPawn::FitnessFunction2(float x, float s)
+{
+	float alpha = MaxLifetimeConst / s;
+	float temp = alpha * FMath::Exp((-1.f / alpha) * x);
+	return temp/ alpha;
 }

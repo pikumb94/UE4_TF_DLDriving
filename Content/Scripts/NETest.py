@@ -15,8 +15,8 @@ import pathlib
 ks.clear_session()
 print('TestNE')
 NN_topology = [tf.keras.layers.Dense(3, activation=tf.nn.tanh),
-#tf.keras.layers.Dense(4, activation=tf.nn.tanh),
-#tf.keras.layers.Dense(4, activation=tf.nn.tanh),
+tf.keras.layers.Dense(4, activation=tf.nn.tanh),
+tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(2, activation=tf.nn.tanh)]
 
 model = tf.keras.models.Sequential(NN_topology)
@@ -29,7 +29,7 @@ class NETest:
     def begin_play(self):
       global model
       Wpath = pathlib.Path(__file__).parent.resolve() 
-      path = str(Wpath) + '/BestModel'
+      path = str(Wpath) + '/Model1'
       model.load_weights(path)
       
       new_actor = self.uobject.actor_spawn(ue.find_class('NN_ControlledPawn'), self.uobject.get_actor_location(),self.uobject.get_actor_rotation())
