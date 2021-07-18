@@ -30,7 +30,9 @@ class NNDriveCar:
         self.component = self.uobject.get_component_by_type(WheeledVehicleMovementComponent)
         #print(self.pawn.functions())
         #print(self.uobject.properties())
+        
         self.uobject.SetComponentTickInterval(0.100)
+        
         #print(self.pawn.properties())
         #print(self.pawn.functions())
         

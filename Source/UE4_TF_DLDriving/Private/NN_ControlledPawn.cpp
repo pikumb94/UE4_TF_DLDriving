@@ -28,14 +28,14 @@ ANN_ControlledPawn::ANN_ControlledPawn()
 
 	//TArray<FName> Names;
 	//GetMesh()->GetBoneNames(Names);
-	ShortestLapTime = 20.f;//MAI USATO
+	ShortestLapTime = 25.f;
 	//AgentIndex = -1;
 	//OnEndPlay.AddDynamic(this, &ANN_ControlledPawn::EndPlayHandler);
 	//Check on Agent going at low speed
-	MinVelocityThreshold = 7.f;
-	MaxLifetimeLowVelocity = 2.f;
+	MinVelocityThreshold = 7.5f;//10.f;
+	MaxLifetimeLowVelocity = 5.f;
 
-	MaxLifetime = MaxLifetimeConst = ShortestLapTime*1.5f;
+	MaxLifetime = MaxLifetimeConst = ShortestLapTime*2.f;
 	CumulatedFitness = 0.f;
 	CheckpointOverlap = false;
 }
@@ -132,6 +132,7 @@ float ANN_ControlledPawn::GetFrontDstPerc()
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Front Perc: %s"), *FString::SanitizeFloat(percDst)));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("Comp: %s"), *(End-Start).ToString()));
 			}
+			//DrawDebugLine(GetWorld(), Start, OutHit.ImpactPoint, FColor::Red, false, -1, 0, 5);
 		}
 	}
 	return percDst;
@@ -160,7 +161,7 @@ void ANN_ControlledPawn::OnHit(UPrimitiveComponent* HitComponent, AActor* OtherA
 
 			float fitness = 0.f;
 			if (CheckpointOverlap) {
-				fitness = 1.f + 0.1f * FitnessFunctionPerform(CumulatedFitness);
+				fitness = 1.f;//+ 0.1f * FitnessFunctionPerform(CumulatedFitness);
 			}
 			else {
 				fitness = FitnessFunctionSurvive(CumulatedFitness);
@@ -215,6 +216,9 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("SIDE perc: %s"), *FString::SanitizeFloat(percDst)));
 
 			}
+
+			//DrawDebugLine(GetWorld(), StartRight, OutHitRight.ImpactPoint, FColor::Yellow, false, -1, 0, 5);
+			//DrawDebugLine(GetWorld(), StartLeft, OutHitLeft.ImpactPoint, FColor::Green, false, -1, 0, 5);
 		}
 	}
 

@@ -19,7 +19,7 @@ ANE_Handler::ANE_Handler()
 
 	OnStartFitnessComputation.AddDynamic(this, &ANE_Handler::OnStartFitnessHandler);
 	OnAgentFitnessComputed.AddDynamic(this, &ANE_Handler::AgentFitnessReturned);
-	BatchNum = 25;
+	BatchNum = 15;
 
 }
 
