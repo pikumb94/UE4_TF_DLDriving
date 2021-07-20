@@ -18,8 +18,8 @@ ANN_ControlledPawn::ANN_ControlledPawn()
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> NNMaterial(TEXT("/Game/VehicleAdv/Materials/MaterialInstances/Template_BaseOrange.Template_BaseOrange"));
 	GetMesh()->SetMaterial(0, NNMaterial.Object);
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Vehicle, ECollisionResponse::ECR_Ignore);
-	MaxRaycastLengthFront = MaxRaycastLengthSide = 2500.f;
-	
+	MaxRaycastLengthFront = 2500.f;
+	MaxRaycastLengthSide = 500.f;//450
 	PythonComp = CreateDefaultSubobject<UPythonComponent>(TEXT("PyComponent"));
 	PythonComp->PythonModule = PythonComp->PythonClass = "NNDriveCar";
 
@@ -32,7 +32,7 @@ ANN_ControlledPawn::ANN_ControlledPawn()
 	//AgentIndex = -1;
 	//OnEndPlay.AddDynamic(this, &ANN_ControlledPawn::EndPlayHandler);
 	//Check on Agent going at low speed
-	MinVelocityThreshold = 7.5f;//10.f;
+	MinVelocityThreshold = 5.f;//10.f;
 	MaxLifetimeLowVelocity = 5.f;
 
 	MaxLifetime = MaxLifetimeConst = ShortestLapTime*2.f;
@@ -203,24 +203,37 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 	//DrawDebugLine(GetWorld(), StartRight, EndRight, FColor::Yellow, false, -1, 0, 5);
 	//DrawDebugLine(GetWorld(), StartLeft, EndLeft, FColor::Green, false, -1, 0, 5);
 
-	if (GetWorld()->LineTraceSingleByChannel(OutHitRight, StartRight, EndRight, ECollisionChannel::ECC_Vehicle, CollisionParams) && GetWorld()->LineTraceSingleByChannel(OutHitLeft, StartLeft, EndLeft, ECollisionChannel::ECC_Vehicle, CollisionParams))
+	bool bHitRight = GetWorld()->LineTraceSingleByChannel(OutHitRight, StartRight, EndRight, ECollisionChannel::ECC_Vehicle, CollisionParams);
+	bool bHitLeft = GetWorld()->LineTraceSingleByChannel(OutHitLeft, StartLeft, EndLeft, ECollisionChannel::ECC_Vehicle, CollisionParams);
+
+	if (bHitRight && bHitLeft)
 	{
 		if (OutHitRight.bBlockingHit && OutHitRight.GetActor() && OutHitLeft.bBlockingHit && OutHitLeft.GetActor())
 		{
 			percDst = -1 + (OutHitLeft.Distance / ((OutHitLeft.Distance + OutHitRight.Distance) / 2));
 			
-			if (GEngine) {
+			//if (GEngine) {
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Yellow, FString::Printf(TEXT("You are hitting: %s"), *OutHitRight.GetActor()->GetName()));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("You are hitting: %s"), *OutHitLeft.GetActor()->GetName()));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, FString::Printf(TEXT("Comp: %s"), *(EndRight - StartRight).ToString()));
 				//GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("SIDE perc: %s"), *FString::SanitizeFloat(percDst)));
 
-			}
+			//}
 
 			//DrawDebugLine(GetWorld(), StartRight, OutHitRight.ImpactPoint, FColor::Yellow, false, -1, 0, 5);
 			//DrawDebugLine(GetWorld(), StartLeft, OutHitLeft.ImpactPoint, FColor::Green, false, -1, 0, 5);
 		}
+
+
 	}
+	else {
+		if (!bHitRight && bHitLeft)
+			percDst = -1.f;
+		else if (bHitRight && !bHitLeft)
+			percDst = 1.f;
+	} 
+	//if (GEngine)
+	//	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("SIDE perc: %s"), *FString::SanitizeFloat(percDst)));
 
 	return percDst;
 }

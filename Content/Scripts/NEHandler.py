@@ -151,12 +151,12 @@ ks.clear_session()
 print('NEHandler')
 
 #Evolution Part|| Data: N: number of generations, S: population size, E: elitism rate, C: crossover rate, M: mutation rate; K: percentage of ways in tournament selection
-N=50           #100
-S=50           #50
+N=200           #100
+S=30           #50
 E=0.5          #0.5
-C=0.6          #0.6
-M=0.1         #0.1
-K=0.25         #0.25
+C=0.8          #0.6
+M=0.3         #0.1
+K=0.2         #0.25
 
 NN_topology = [tf.keras.layers.Dense(3, activation=tf.nn.tanh),
 tf.keras.layers.Dense(4, activation=tf.nn.tanh),
