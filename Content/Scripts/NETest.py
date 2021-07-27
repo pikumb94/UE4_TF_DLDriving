@@ -30,8 +30,8 @@ class NETest:
       global model
       filename = self.uobject.get_owner().get_name()
       Wpath = pathlib.Path(__file__).parent.resolve() 
-      #path = str(Wpath) + '/Models/ToTestModels/'+filename#'/Model3'
-      path = str(Wpath) + '/'+filename
+      path = str(Wpath) + '/Models/ToTestModels/'+filename
+      #path = str(Wpath) + '/'+filename
       model.load_weights(path)
       
       new_actor = self.uobject.actor_spawn(ue.find_class('NN_ControlledPawn'), self.uobject.get_actor_location(),self.uobject.get_actor_rotation())

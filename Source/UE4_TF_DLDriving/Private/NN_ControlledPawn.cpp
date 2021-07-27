@@ -32,8 +32,8 @@ ANN_ControlledPawn::ANN_ControlledPawn()
 	//AgentIndex = -1;
 	//OnEndPlay.AddDynamic(this, &ANN_ControlledPawn::EndPlayHandler);
 	//Check on Agent going at low speed
-	MinVelocityThreshold = 5.f;//10.f;
-	MaxLifetimeLowVelocity = 5.f;
+	MinVelocityThreshold = 8.f;//10.f;
+	MaxLifetimeLowVelocity = 6.f;
 
 	MaxLifetime = MaxLifetimeConst = ShortestLapTime*2.f;
 	CumulatedFitness = 0.f;
@@ -118,7 +118,6 @@ float ANN_ControlledPawn::GetFrontDstPerc()
 	float percDst = 0.0;
 
 
-	//DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, -1, 0, 5);
 	if (GetWorld()->LineTraceSingleByChannel(OutHit, Start, End, ECollisionChannel::ECC_Vehicle, CollisionParams))
 	{
 		if (OutHit.bBlockingHit && OutHit.GetActor())
@@ -134,7 +133,12 @@ float ANN_ControlledPawn::GetFrontDstPerc()
 			}
 			//DrawDebugLine(GetWorld(), Start, OutHit.ImpactPoint, FColor::Red, false, -1, 0, 5);
 		}
+
 	}
+	else {
+		//DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, -1, 0, 5);
+	}
+
 	return percDst;
 }
 
@@ -200,9 +204,6 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 
 	float percDst = 0.0;
 
-	//DrawDebugLine(GetWorld(), StartRight, EndRight, FColor::Yellow, false, -1, 0, 5);
-	//DrawDebugLine(GetWorld(), StartLeft, EndLeft, FColor::Green, false, -1, 0, 5);
-
 	bool bHitRight = GetWorld()->LineTraceSingleByChannel(OutHitRight, StartRight, EndRight, ECollisionChannel::ECC_Vehicle, CollisionParams);
 	bool bHitLeft = GetWorld()->LineTraceSingleByChannel(OutHitLeft, StartLeft, EndLeft, ECollisionChannel::ECC_Vehicle, CollisionParams);
 
@@ -227,10 +228,16 @@ float ANN_ControlledPawn::GetSideTrackPerc()
 
 	}
 	else {
-		if (!bHitRight && bHitLeft)
+		if (!bHitRight && bHitLeft) {
 			percDst = -1.f;
-		else if (bHitRight && !bHitLeft)
+			//DrawDebugLine(GetWorld(), StartLeft, OutHitLeft.ImpactPoint, FColor::Green, false, -1, 0, 5);
+			//DrawDebugLine(GetWorld(), StartRight, EndRight, FColor::Yellow, false, -1, 0, 5);
+		}
+		else if (bHitRight && !bHitLeft) {
 			percDst = 1.f;
+			//DrawDebugLine(GetWorld(), StartRight, OutHitRight.ImpactPoint, FColor::Yellow, false, -1, 0, 5);
+			//DrawDebugLine(GetWorld(), StartLeft, EndLeft, FColor::Green, false, -1, 0, 5);
+		}
 	} 
 	//if (GEngine)
 	//	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, FString::Printf(TEXT("SIDE perc: %s"), *FString::SanitizeFloat(percDst)));
