@@ -8,7 +8,7 @@ public class UE4_TF_DLDriving : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "PhysXVehicles", "HeadMountedDisplay", "UnrealEnginePython" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "PhysXVehicles", "HeadMountedDisplay", "UnrealEnginePython", "AIModule" });
 
 		PublicDefinitions.Add("HMD_MODULE_INCLUDED=1");
 	}

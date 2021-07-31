@@ -7,7 +7,11 @@
 		{
 			"Name": "UE4_TF_DLDriving",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"PhysXVehicles"
+			]
 		}
 	],
 	"Plugins": [

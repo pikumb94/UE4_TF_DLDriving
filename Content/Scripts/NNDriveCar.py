@@ -9,52 +9,62 @@ from collections.abc import Iterable   # import directly from collections for Py
 
 from unreal_engine.classes import WheeledVehicleMovementComponent
 
-print('NNDriveCar')
 NN_topology = [tf.keras.layers.Dense(3, activation=tf.nn.tanh),
 tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(4, activation=tf.nn.tanh),
 tf.keras.layers.Dense(2, activation=tf.nn.tanh)]
-#sess = ks.get_session()
-
+#print('NNDriveCar')
 class NNDriveCar:
-
 
     def __init__(self):
     #model and topology is set statically to avoid to pass the topology for every NNCar spawned
         self.model = tf.keras.models.Sequential(NN_topology)
-        self.model(tf.constant([[1.0,1.0,1.0]]))
+        self.model(tf.constant([[0.0,0.0,0.0]]))
         self.bModelLoaded = False
         self.bTopologyLoaded = True
+        self.index = -1
         
     # this is called on game start
     def begin_play(self):
-        #sess = tf.Session()
         self.pawn = self.uobject.get_owner()
-        #print(self.uobject.functions())
+        self.component = self.uobject.get_component_by_type(WheeledVehicleMovementComponent)
+        #print(self.pawn.functions())
         #print(self.uobject.properties())
-        self.uobject.SetComponentTickInterval(0.150)
+        
+        #self.uobject.SetComponentTickInterval(0.100)
+        
         #print(self.pawn.properties())
         #print(self.pawn.functions())
         
     # this is called at every 'tick'    
     def tick(self, delta_time):
+        SplitStr = self.pawn.GetInputsAsString().split()
         #print(delta_time)
         if(self.bModelLoaded):
-            x=tf.compat.v1.placeholder(tf.float32, shape=(1, 3))
-            #y = self.model()#velocity, front and side
-            y=self.model(x)
-            with ks.get_session() as session:
-                result = session.run(y, feed_dict={x: [[1.0,-1.0,1.0]]})
-                print(result)
-                self.pawn.ActuateActions(1.0,1.0)
-
+            SplitStr = np.array(SplitStr)
+            SplitStr = SplitStr.astype(np.float32)
+            x = tf.constant([SplitStr])
+            y = self.model(x)
+            #print('x:%s y:%s'%(type(x[0][0].numpy()),type(y[0][0].numpy())))
+            #print('x:',x[0][0],x[0][1],x[0][2])
+            #print('y:',y[0][0],y[0][1])
+            #print('x:%s'%(x.numpy()))
+            #print('y:%s'%(y.numpy()))
+            self.pawn.ActuateActions(y[0][0],y[0][1])
+            #self.pawn.ActuateActions(1-max(0.0,y[0][0]),y[0][1])
+    
+    def SetIndex(self, index):
+        self.index = int(index)
+    
+    def GetIndex(self):
+        return self.index
     
     def LoadModel(self, NewModel):
         decodedWeights = json.loads(NewModel)
         self.model.set_weights([np.array(x) for x in decodedWeights])
         self.bModelLoaded = True
-        print('Model Loaded:')
-        print(self.model.get_weights())
+        #print('Model Loaded:')
+        #print(self.model.get_weights())
         
     def LoadTopology(self, Topology):
         seld.model = ks.models.model_from_json(Topology)
